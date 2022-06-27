@@ -56,7 +56,7 @@ void markUsed_g(LRUg *lru, FrameIdx frame) {
     for ( FrameIdx now = lru->nodes[frame].next;
             now != MAX_FRAME;
             now = lru->nodes[now].next ) {
-        assert( now == frame && "Marking free frame as used" )
+        assert( now == frame && "Marking free frame as used" );
     }
     remove_node(lru, frame);
     put_node_before(lru, frame, MAX_FRAME);
