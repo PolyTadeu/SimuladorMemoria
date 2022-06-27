@@ -12,13 +12,18 @@
 
 #define MEM_SIZE    (MAX_FRAME * FRAME_SIZE)
 
+#define WORKING_SET 4
+
+typedef u8 FrameIdx;
+typedef u8 PageNum;
+
 typedef u8 Pid;
 #define S_PID           "%hhu"
 #define P_PID(pid)      (pid)
 
 typedef u8 Vaddr;
 #define VirtPage(va)    ((va)>>OFFSET_BITS)
-#define VirtOffset(va)  ((va)&((1<<OFFSET_BITS)-1))
+#define VirtOffset(va)  ((PageNum)((va)&((1<<OFFSET_BITS)-1)))
 #define S_VADDR         "%02hhuv%01hhu"
 #define P_VADDR(va)     VirtPage(va), VirtOffset(va)
 

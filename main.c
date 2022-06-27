@@ -5,6 +5,7 @@
 #include <pthread.h>
 
 #include "premissas.h"
+#include "lru_pequeno.c"
 #include "pagetable.c"
 
 typedef struct _GlobalData {
@@ -68,7 +69,7 @@ u8 read_addr(Pid pid, Vaddr addr) {
             P_PID(pid), P_VADDR(addr));
     PageTable *vtable = global.vtables + pid;
     if ( !isLoaded(vtable, addr) ) {
-        loadPage(vtable, addr);
+        loadPage(vtable, pid, addr);
     }
     markPageUsed(vtable, addr);
     FrameIdx frame = getFrameIdx(vtable, addr);
@@ -85,11 +86,12 @@ void write_addr(Pid pid, Vaddr addr, u8 byte) {
             P_PID(pid), P_VADDR(addr), byte);
     PageTable *vtable = global.vtables + pid;
     if ( !isLoaded(vtable, addr) ) {
-        loadPage(vtable, addr);
+        loadPage(vtable, pid, addr);
     }
     markPageUsed(vtable, addr);
     FrameIdx frame = getFrameIdx(vtable, addr);
     Faddr real = RealAddr(frame, addr);
+    global.mem[real] = byte;
 
     pthread_mutex_unlock(global.lock);
 }

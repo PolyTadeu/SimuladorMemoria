@@ -2,8 +2,7 @@
 #define __PAGE_TABLE__
 
 #include "premissas.h"
-
-typedef u8 FrameIdx;
+#include "lru_pequeno.c"
 
 #define Is_Flag_Set(flag, thing)    (((thing) & (flag)) == (flag))
 #define Set_Flag(flag, thing)       ((thing) |= (flag))
@@ -32,6 +31,7 @@ typedef struct _PageLine {
 
 typedef struct _PageTable {
     PageLine page[MAX_PAGE];
+    LRUp lru;
 } PageTable;
 
 b32 isLoaded(PageTable *vtable, Vaddr addr) {
@@ -39,15 +39,33 @@ b32 isLoaded(PageTable *vtable, Vaddr addr) {
             GetPageFlags(vtable, addr));
 }
 
-void loadPage(PageTable *vtable, Vaddr addr) {
+void copy_from_disk(Pid pid, PageNum page, FrameIdx frame) {
+    (void) pid; (void) page; (void) frame;
+    assert(0 && "copy_from_disk is not implemented");
+}
+
+void unloadPage(PageTable *vtable, Pid pid, PageNum page) {
+    (void) vtable; (void) pid; (void) page;
+    assert(0 && "unloadPage is not implemented");
+}
+
+void loadPage(PageTable *vtable, Pid pid, Vaddr addr) {
     (void) vtable; (void) addr;
-    assert(0 && "loadPage is not implemented");
+    LRUp *lru = &(vtable->lru);
+    if ( is_full_p(lru) ) {
+        const PageNum page = dequeue_p(lru);
+        const FrameIdx frame = vtable->page[page].frame;
+        unloadPage(vtable, pid, page);
+        copy_from_disk(pid, VirtPage(addr), frame);
+    } else {
+        assert(0 && "Precisa do LRU Grande");
+    }
 }
 
 void markPageUsed(PageTable *vtable, Vaddr addr) {
     assert(isLoaded(vtable, addr)
             && "Trying to makePageUsed a unloaded Page");
-    // TODO: provav aqui vai fazer alguma coisa para manter o LRU
+    markUsed_p(&(vtable->lru), VirtPage(addr));
 }
 
 void markPageModified(PageTable *vtable, Vaddr addr) {
