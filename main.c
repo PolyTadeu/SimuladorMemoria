@@ -5,8 +5,8 @@
 #include <pthread.h>
 
 #include "premissas.h"
-#include "lru_pequeno.c"
 #include "pagetable.c"
+#include "lru_grande.c"
 
 typedef struct _GlobalData {
     u32 num_procs;
