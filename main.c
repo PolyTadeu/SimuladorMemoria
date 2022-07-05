@@ -6,13 +6,13 @@
 
 #include "premissas.h"
 #include "pagetable.c"
-#include "lru_grande.c"
 
 typedef struct _GlobalData {
     u32 num_procs;
     PageTable *vtables;     // size is num_procs
     u8 *mem;                // size is MEM_SIZE
     u8 *disk;               // size is num_procs*MAX_PAGE*FRAME_SIZE
+    LRUg *lrug;
     pthread_mutex_t *lock;
 } GlobalData;
 
@@ -43,6 +43,14 @@ void create_global(const u32 num_procs) {
         exit(1);
     }
 
+    global.lrug = malloc(sizeof(*global.lrug));
+    if ( !global.lrug ) {
+        printf("Sem memoria para alocar lur grande (%lu bytes)\n",
+                sizeof(*global.lrug));
+        exit(1);
+    }
+    init_lrug(global.lrug);
+
     global.lock = malloc(sizeof(*global.lock));
     if ( !global.lock ) {
         printf("Sem memoria para alocar global.lock (%lu bytes)\n",
@@ -58,8 +66,25 @@ void create_global(const u32 num_procs) {
 void destroy_global() {
     pthread_mutex_destroy(global.lock);
     free(global.lock);
+    free(global.lrug);
     free(global.vtables);
     free(global.mem);
+}
+
+void copy_from_disk(Pid pid, PageNum page, FrameIdx frame) {
+    const u64 diskIdx = (pid * MAX_PAGE + page) * FRAME_SIZE;
+    const u64 memIdx = frame * FRAME_SIZE;
+    for ( u64 i = 0; i < FRAME_SIZE; i++ ) {
+        global.mem[memIdx + i] = global.disk[diskIdx + i];
+    }
+}
+
+void copy_to_disk(Pid pid, PageNum page, FrameIdx frame) {
+    const u64 diskIdx = (pid * MAX_PAGE + page) * FRAME_SIZE;
+    const u64 memIdx = frame * FRAME_SIZE;
+    for ( u64 i = 0; i < FRAME_SIZE; i++ ) {
+        global.disk[diskIdx + i] = global.mem[memIdx + i];
+    }
 }
 
 u8 read_addr(Pid pid, Vaddr addr) {
@@ -69,9 +94,9 @@ u8 read_addr(Pid pid, Vaddr addr) {
             P_PID(pid), P_VADDR(addr));
     PageTable *vtable = global.vtables + pid;
     if ( !isLoaded(vtable, addr) ) {
-        loadPage(vtable, pid, addr);
+        loadPage(global.lrug, vtable, pid, addr);
     }
-    markPageUsed(vtable, addr);
+    markPageUsed(global.lrug, vtable, addr);
     FrameIdx frame = getFrameIdx(vtable, addr);
     Faddr real = RealAddr(frame, addr);
 
@@ -86,9 +111,9 @@ void write_addr(Pid pid, Vaddr addr, u8 byte) {
             P_PID(pid), P_VADDR(addr), byte);
     PageTable *vtable = global.vtables + pid;
     if ( !isLoaded(vtable, addr) ) {
-        loadPage(vtable, pid, addr);
+        loadPage(global.lrug, vtable, pid, addr);
     }
-    markPageUsed(vtable, addr);
+    markPageModified(global.lrug, vtable, addr);
     FrameIdx frame = getFrameIdx(vtable, addr);
     Faddr real = RealAddr(frame, addr);
     global.mem[real] = byte;

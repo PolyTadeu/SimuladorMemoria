@@ -34,4 +34,7 @@ typedef u8 Faddr;
 
 #define SLEEP_TIME  3
 
+void copy_from_disk(Pid pid, PageNum page, FrameIdx frame);
+void copy_to_disk(Pid pid, PageNum page, FrameIdx frame);
+
 #endif // __PREMISSAS_H__

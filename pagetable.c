@@ -3,6 +3,7 @@
 
 #include "premissas.h"
 #include "lru_pequeno.c"
+#include "lru_grande.c"
 
 #define Is_Flag_Set(flag, thing)    (((thing) & (flag)) == (flag))
 #define Set_Flag(flag, thing)       ((thing) |= (flag))
@@ -39,44 +40,49 @@ b32 isLoaded(PageTable *vtable, Vaddr addr) {
             GetPageFlags(vtable, addr));
 }
 
-void copy_from_disk(Pid pid, PageNum page, FrameIdx frame) {
-    (void) pid; (void) page; (void) frame;
-    assert(0 && "copy_from_disk is not implemented");
-}
-
 void unloadPage(PageTable *vtable, Pid pid, PageNum page) {
     (void) vtable; (void) pid; (void) page;
     assert(0 && "unloadPage is not implemented");
 }
 
-void loadPage(PageTable *vtable, Pid pid, Vaddr addr) {
-    (void) vtable; (void) addr;
+void loadPage(LRUg *lrug, PageTable *vtable, Pid pid, Vaddr addr) {
     LRUp *lru = &(vtable->lru);
+    FrameIdx frame;
     if ( is_full_p(lru) ) {
         const PageNum page = dequeue_p(lru);
-        const FrameIdx frame = vtable->page[page].frame;
+        frame = vtable->page[page].frame;
         unloadPage(vtable, pid, page);
-        copy_from_disk(pid, VirtPage(addr), frame);
     } else {
-        assert(0 && "Precisa do LRU Grande");
+        if ( is_full_g(lrug) ) {
+            frame = dequeue_g(lrug);
+            const LRUg_Node node = lrug->nodes[frame];
+            unloadPage(vtable, node.pid, node.page);
+        } else {
+            frame = alloc_page_g(lrug);
+        }
     }
-}
-
-void markPageUsed(PageTable *vtable, Vaddr addr) {
-    assert(isLoaded(vtable, addr)
-            && "Trying to makePageUsed a unloaded Page");
-    markUsed_p(&(vtable->lru), VirtPage(addr));
-}
-
-void markPageModified(PageTable *vtable, Vaddr addr) {
-    markPageUsed(vtable, addr);
-    Set_Flag(PageFlag_Modified, GetPageFlags(vtable, addr));
+    alloc_page_p(lru, VirtPage(addr));
+    vtable->page[VirtPage(addr)].frame = frame;
+    vtable->page[VirtPage(addr)].flags = PageFlag_Loaded;
+    copy_from_disk(pid, VirtPage(addr), frame);
 }
 
 FrameIdx getFrameIdx(PageTable *vtable, Vaddr addr) {
     assert(isLoaded(vtable, addr)
             && "Trying to getFrameIdx from a unloaded Page");
     return vtable->page[VirtPage(addr)].frame;
+}
+
+void markPageUsed(LRUg *lrug, PageTable *vtable, Vaddr addr) {
+    assert(isLoaded(vtable, addr)
+            && "Trying to makePageUsed a unloaded Page");
+    markUsed_p(&(vtable->lru), VirtPage(addr));
+    markUsed_g(lrug, getFrameIdx(vtable, addr));
+}
+
+void markPageModified(LRUg *lrug, PageTable *vtable, Vaddr addr) {
+    markPageUsed(lrug, vtable, addr);
+    Set_Flag(PageFlag_Modified, GetPageFlags(vtable, addr));
 }
 
 #undef Is_Flag_Set
