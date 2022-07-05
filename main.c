@@ -45,11 +45,11 @@ void create_global(const u32 num_procs) {
 
     global.lrug = malloc(sizeof(*global.lrug));
     if ( !global.lrug ) {
-        printf("Sem memoria para alocar lur grande (%lu bytes)\n",
+        printf("Sem memoria para alocar lru grande (%lu bytes)\n",
                 sizeof(*global.lrug));
         exit(1);
     }
-    init_lrug(global.lrug);
+    init_lrug(global.lrug, MAX_FRAME);
 
     global.lock = malloc(sizeof(*global.lock));
     if ( !global.lock ) {
