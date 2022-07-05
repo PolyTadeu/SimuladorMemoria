@@ -125,18 +125,9 @@ typedef struct _ProcIn {
     Pid pid;
 } ProcIn;
 
-typedef struct _ProcOut {
-} ProcOut;
-
 void* func(void *v) {
     ProcIn pin = *(ProcIn *) v;
     Pid pid = pin.pid;
-    ProcOut *ret = malloc(sizeof(*ret));
-    if ( !ret ) {
-        fprintf(stderr, "Processo "S_PID": sem memória para allocar"
-                " ProcOut (%lu bytes)\n", P_PID(pid), sizeof(*ret));
-        return NULL;
-    }
     u8 max_page = rand() % MAX_PAGE;
     u8 i = max_page + 1;
     printf("Thread "S_PID"! max_page: %hhu\n", P_PID(pid), max_page);
@@ -153,8 +144,8 @@ void* func(void *v) {
         sleep(SLEEP_TIME);
         i -= 1;
     }
-    printf("Saindo "S_PID"! ret: %p\n", pid, ret);
-    return ret;
+    printf("Saindo "S_PID"!\n", pid);
+    return NULL;
 }
 
 int main(const int argc, const char **argv) {
@@ -196,10 +187,8 @@ int main(const int argc, const char **argv) {
     }
 
     for ( u32 i = 0; i < lenpids; i++ ) {
-        ProcOut *ret;
-        pthread_join(pids[i], (void **) &ret);
-        printf("Main: join processo %u. ret: %p\n", i, ret);
-        free(ret);
+        pthread_join(pids[i], NULL);
+        printf("Main: join processo %u.\n", i);
     }
 
     free(pins);
