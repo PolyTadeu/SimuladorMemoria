@@ -71,7 +71,12 @@ FrameIdx alloc_page_g(LRUg *lru) {
     {
         // Tira da lista de free
         remove_node(lru, frame);
-        lru->free = lru->nodes[frame].next;
+        const FrameIdx next = lru->nodes[frame].next;
+        if ( frame == next ) {
+            lru->free = lru->frame_cnt;
+        } else {
+            lru->free = next;
+        }
     }
     {
         // Coloca no final da lista
