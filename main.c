@@ -66,6 +66,7 @@ void create_global(const u32 num_procs) {
 void destroy_global() {
     pthread_mutex_destroy(global.lock);
     free(global.lock);
+    deinit_lrug(global.lrug);
     free(global.lrug);
     free(global.vtables);
     free(global.mem);

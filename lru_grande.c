@@ -22,7 +22,7 @@ typedef struct _LRUg {
 } LRUg;
 
 void init_lrug(LRUg *lru, u32 frame_cnt) {
-    LRUg_Node *nodes = malloc(sizeof(*nodes)*frame_cnt);
+    LRUg_Node *nodes = malloc(sizeof(*nodes)*(frame_cnt+1));
     if ( !nodes ) {
         printf("Sem memoria para alocar lista de nodes do "
                "lru grande (%lu bytes)\n",
@@ -43,6 +43,10 @@ void init_lrug(LRUg *lru, u32 frame_cnt) {
         .frame_cnt = frame_cnt,
     };
     *lru = l;
+}
+
+void deinit_lrug(LRUg *lru) {
+    free(lru->nodes);
 }
 
 b32 is_full_g(LRUg *lru) {
