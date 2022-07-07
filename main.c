@@ -149,6 +149,7 @@ void* func(void *v) {
 }
 
 int main(const int argc, const char **argv) {
+    // u32 lenpids = MAX_THREADS;
     u32 lenpids = 3;
 
     if ( argc > 1 ) {

@@ -5,6 +5,7 @@
 
 #define OFFSET_BITS 0
 #define MAX_PAGE    4
+// #define MAX_PAGE    50
 #define MAX_ADDR    (MAX_PAGE << OFFSET_BITS)
 
 #define MAX_FRAME   64
@@ -32,6 +33,7 @@ typedef u8 Faddr;
 #define S_FADDR             "%02hhx"
 #define P_FADDR(fa)         (fa)
 
+#define MAX_THREADS 20
 #define SLEEP_TIME  3
 
 void copy_from_disk(Pid pid, PageNum page, FrameIdx frame);
