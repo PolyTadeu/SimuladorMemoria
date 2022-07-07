@@ -12,6 +12,8 @@
 #define Flag_Unsetted(flag, thing)  ((thing) & (~(flag)))
 #define GetPageFlags(vt, addr)      (vt)->page[VirtPage(addr)].flags
 
+#define GetVtable(pid)              ((PageTable *)(getVoidVtable(pid)))
+
 typedef enum _PageFlagsEnum {
     PageFlag_Loaded      = 0x01,
     PageFlag_Modified    = 0x02,
@@ -41,8 +43,21 @@ b32 isLoaded(PageTable *vtable, Vaddr addr) {
 }
 
 void unloadPage(PageTable *vtable, Pid pid, PageNum page) {
-    (void) vtable; (void) pid; (void) page;
-    assert(0 && "unloadPage is not implemented");
+    PageLine *pline = vtable->page + page;
+
+    printf("---------\n");
+    printf("pid: "S_PID", page: %hhu\n",
+            P_PID(pid), page);
+    printf("pline->flags: %X, pline->frame: %hhu\n",
+            pline->flags, pline->frame);
+    printf("---------\n");
+    assert( Is_Flag_Set(PageFlag_Loaded, pline->flags) );
+
+    if ( Is_Flag_Set(PageFlag_Modified, pline->flags) ) {
+        copy_to_disk(pid, page, pline->frame);
+    }
+
+    pline->flags = 0;
 }
 
 void loadPage(LRUg *lrug, PageTable *vtable, Pid pid, Vaddr addr) {
@@ -56,7 +71,7 @@ void loadPage(LRUg *lrug, PageTable *vtable, Pid pid, Vaddr addr) {
         if ( is_full_g(lrug) ) {
             frame = dequeue_g(lrug);
             const LRUg_Node node = lrug->nodes[frame];
-            unloadPage(vtable, node.pid, node.page);
+            unloadPage(GetVtable(node.pid), node.pid, node.page);
         } else {
             frame = alloc_page_g(lrug);
         }
@@ -65,6 +80,7 @@ void loadPage(LRUg *lrug, PageTable *vtable, Pid pid, Vaddr addr) {
     vtable->page[VirtPage(addr)].frame = frame;
     vtable->page[VirtPage(addr)].flags = PageFlag_Loaded;
     copy_from_disk(pid, VirtPage(addr), frame);
+    Set_Flag(PageFlag_Loaded, GetPageFlags(vtable, addr));
 }
 
 FrameIdx getFrameIdx(PageTable *vtable, Vaddr addr) {
@@ -91,5 +107,7 @@ void markPageModified(LRUg *lrug, PageTable *vtable, Vaddr addr) {
 #undef Flag_Setted
 #undef Flag_Unsetted
 #undef GetPageFlags
+
+#undef GetVtable
 
 #endif // __PAGE_TABLE__

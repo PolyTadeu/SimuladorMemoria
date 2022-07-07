@@ -36,6 +36,9 @@ typedef u8 Faddr;
 #define MAX_THREADS 20
 #define SLEEP_TIME  3
 
+#define OUT         stdout
+
+void* getVoidVtable(Pid pid);
 void copy_from_disk(Pid pid, PageNum page, FrameIdx frame);
 void copy_to_disk(Pid pid, PageNum page, FrameIdx frame);
 

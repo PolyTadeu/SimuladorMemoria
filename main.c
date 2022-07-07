@@ -72,6 +72,11 @@ void destroy_global() {
     free(global.mem);
 }
 
+void* getVoidVtable(Pid pid) {
+    assert( pid < global.num_procs );
+    return global.vtables + pid;
+}
+
 void copy_from_disk(Pid pid, PageNum page, FrameIdx frame) {
     const u64 diskIdx = (pid * MAX_PAGE + page) * FRAME_SIZE;
     const u64 memIdx = frame * FRAME_SIZE;
