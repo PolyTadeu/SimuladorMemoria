@@ -4,8 +4,7 @@
 #include "types.h"
 
 #define OFFSET_BITS 0
-#define MAX_PAGE    4
-// #define MAX_PAGE    50
+#define MAX_PAGE    50
 #define MAX_ADDR    (MAX_PAGE << OFFSET_BITS)
 
 #define MAX_FRAME   64

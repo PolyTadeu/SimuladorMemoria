@@ -150,14 +150,10 @@ typedef struct _ProcIn {
     Pid pid;
 } ProcIn;
 
-void* func(void *v) {
+void* process(void *v) {
     ProcIn pin = *(ProcIn *) v;
     Pid pid = pin.pid;
-    u8 max_page = rand() % MAX_PAGE;
-    u8 i = max_page + 1;
-    printf("Thread "S_PID"! max_page: %hhu\n", P_PID(pid), max_page);
-    while ( i > 0 ) {
-        printf("Processo "S_PID"!\n", P_PID(pid));
+    while ( 1 ) {
         if ( rand() & 1 ) {
             u8 byte = read_addr(pid, rand() % MAX_ADDR);
             printf("Processo "S_PID": read 0x%02hhx\n",
@@ -167,25 +163,13 @@ void* func(void *v) {
             write_addr(pid, addr, pid * MAX_ADDR + addr);
         }
         sleep(SLEEP_TIME);
-        i -= 1;
     }
     printf("Saindo "S_PID"!\n", pid);
     return NULL;
 }
 
-int main(const int argc, const char **argv) {
-    // u32 lenpids = MAX_THREADS;
-    u32 lenpids = 3;
-
-    if ( argc > 1 ) {
-        for ( int i = 1; i < argc; i++ ) {
-            printf("%d: %s\n", i, argv[i]);
-        }
-    } else {
-        printf("Sem argumentos!\n");
-        printf("TODO: print help\n");
-        exit(0);
-    }
+int main() {
+    const u32 lenpids = MAX_THREADS;
 
     create_global(lenpids);
 
@@ -209,7 +193,7 @@ int main(const int argc, const char **argv) {
         };
         pins[i] = pin;
         printf("Criando Processo %u.\n", i);
-        pthread_create(pids + i, NULL, func, pins + i);
+        pthread_create(pids + i, NULL, process, pins + i);
         sleep(SLEEP_TIME);
     }
 
