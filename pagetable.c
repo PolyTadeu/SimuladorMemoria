@@ -101,6 +101,19 @@ void markPageModified(LRUg *lrug, PageTable *vtable, Vaddr addr) {
     Set_Flag(PageFlag_Modified, GetPageFlags(vtable, addr));
 }
 
+void traceTable(FILE *f, const PageTable *vtable) {
+    fprintf(f, " Page |  Flags | Frame\n");
+    for ( u32 i = 0; i < MAX_PAGE; i++ ) {
+        const PageLine pl = vtable->page[i];
+        if ( Is_Flag_Set(PageFlag_Loaded, pl.flags) ) {
+            fprintf(f, " %4u |  0x%02hhx  |  %02hhu\n",
+                    i, pl.flags, pl.frame);
+        }
+    }
+    trace_LRUp(f, &(vtable->lru));
+
+}
+
 #undef Is_Flag_Set
 #undef Set_Flag
 #undef Unset_Flag

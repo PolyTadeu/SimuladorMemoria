@@ -78,6 +78,9 @@ void* getVoidVtable(Pid pid) {
 }
 
 void copy_from_disk(Pid pid, PageNum page, FrameIdx frame) {
+    fprintf(OUT, "Copiando do disco: "
+            "pid: "S_PID", page: %hhu, frame: %hhu\n",
+            P_PID(pid), page, frame);
     const u64 diskIdx = (pid * MAX_PAGE + page) * FRAME_SIZE;
     const u64 memIdx = frame * FRAME_SIZE;
     for ( u64 i = 0; i < FRAME_SIZE; i++ ) {
@@ -86,11 +89,21 @@ void copy_from_disk(Pid pid, PageNum page, FrameIdx frame) {
 }
 
 void copy_to_disk(Pid pid, PageNum page, FrameIdx frame) {
+    fprintf(OUT, "Copiando para o disco: "
+            "pid: "S_PID", page: %hhu, frame: %hhu\n",
+            P_PID(pid), page, frame);
     const u64 diskIdx = (pid * MAX_PAGE + page) * FRAME_SIZE;
     const u64 memIdx = frame * FRAME_SIZE;
     for ( u64 i = 0; i < FRAME_SIZE; i++ ) {
         global.disk[diskIdx + i] = global.mem[memIdx + i];
     }
+}
+
+void trace(FILE *f, Pid pid) {
+    fprintf(f, "\n>>>>>\n");
+    traceTable(f, global.vtables + pid);
+    traceFrames(f, global.lrug);
+    fprintf(f, "<<<<<\n\n");
 }
 
 u8 read_addr(Pid pid, Vaddr addr) {
@@ -100,11 +113,14 @@ u8 read_addr(Pid pid, Vaddr addr) {
             P_PID(pid), P_VADDR(addr));
     PageTable *vtable = global.vtables + pid;
     if ( !isLoaded(vtable, addr) ) {
+        printf("=== PageFault ===\n");
         loadPage(global.lrug, vtable, pid, addr);
     }
     markPageUsed(global.lrug, vtable, addr);
     FrameIdx frame = getFrameIdx(vtable, addr);
     Faddr real = RealAddr(frame, addr);
+
+    trace(OUT, pid);
 
     pthread_mutex_unlock(global.lock);
     return global.mem[real];
@@ -117,12 +133,15 @@ void write_addr(Pid pid, Vaddr addr, u8 byte) {
             P_PID(pid), P_VADDR(addr), byte);
     PageTable *vtable = global.vtables + pid;
     if ( !isLoaded(vtable, addr) ) {
+        printf("=== PageFault ===\n");
         loadPage(global.lrug, vtable, pid, addr);
     }
     markPageModified(global.lrug, vtable, addr);
     FrameIdx frame = getFrameIdx(vtable, addr);
     Faddr real = RealAddr(frame, addr);
     global.mem[real] = byte;
+
+    trace(OUT, pid);
 
     pthread_mutex_unlock(global.lock);
 }
@@ -189,6 +208,7 @@ int main(const int argc, const char **argv) {
             .pid = i,
         };
         pins[i] = pin;
+        printf("Criando Processo %u.\n", i);
         pthread_create(pids + i, NULL, func, pins + i);
         sleep(SLEEP_TIME);
     }

@@ -50,4 +50,14 @@ PageNum dequeue_p(LRUp *lru) {
     return page;
 }
 
+void trace_LRUp(FILE* f, const LRUp *lru) {
+    fprintf(f, "LRUp:");
+    for ( u8 i = 0; i < lru->size; i++ ) {
+        const u8 this = ( lru->next + i ) % WORKING_SET;
+        const PageNum page = lru->queue[this];
+        fprintf(f, " %2hhu", page);
+    }
+    fprintf(f, "\n");
+}
+
 #endif // __LRU_p__

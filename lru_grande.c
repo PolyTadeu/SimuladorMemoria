@@ -106,4 +106,20 @@ FrameIdx dequeue_g(LRUg *lru) {
     return frame;
 }
 
+void traceFrames(FILE *f, const LRUg *lru) {
+    fprintf(f, "LRUg:");
+    FrameIdx idx = lru->nodes[lru->frame_cnt].next;
+    while ( idx < lru->frame_cnt ) {
+        fprintf(f, " %2hhu", idx);
+        idx = lru->nodes[idx].next;
+    }
+    fprintf(f, "\nfree:");
+    idx = lru->free;
+    while ( idx < lru->frame_cnt ) {
+        fprintf(f, " %2hhu", idx);
+        idx = lru->nodes[idx].next;
+    }
+    fprintf(f, "\n");
+}
+
 #endif // __LRU_g__
