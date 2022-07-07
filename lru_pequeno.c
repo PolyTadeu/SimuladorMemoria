@@ -6,6 +6,7 @@
 
 typedef struct _LRUp {
     PageNum queue[WORKING_SET];
+    // Proxima pagina a ser tirada
     u8 next;
     u8 size;
 } LRUp;
@@ -23,12 +24,12 @@ void alloc_page_p(LRUp *lru, PageNum page) {
 
 void markUsed_p(LRUp *lru, PageNum page) {
     b32 found = 0;
-    for ( u8 i = 0; i < WORKING_SET; i++ ) {
-        const u8 this = (lru->next + i - 1) % WORKING_SET;
-        const u8 prev = (lru->next + i) % WORKING_SET;
+    for ( u8 i = 0; i < lru->size; i++ ) {
+        const u8 this = (lru->next + i) % WORKING_SET;
+        const u8 prev = (lru->next + i - 1) % WORKING_SET;
         if ( found ) {
             assert( i > 0 );
-            PageNum tmp = lru->queue[prev];
+            const PageNum tmp = lru->queue[prev];
             lru->queue[prev] = lru->queue[this];
             lru->queue[this] = tmp;
         } else {
@@ -37,7 +38,8 @@ void markUsed_p(LRUp *lru, PageNum page) {
             }
         }
     }
-    assert( found == 1 );
+    assert( found > 0 );
+    assert( found == 1 && "unreachable" );
 }
 
 PageNum dequeue_p(LRUp *lru) {
