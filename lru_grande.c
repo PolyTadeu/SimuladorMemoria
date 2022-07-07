@@ -33,7 +33,8 @@ void init_lrug(LRUg *lru, u32 frame_cnt) {
         nodes[i].next = i+1;
         nodes[i].prev = i-1;
     }
-    nodes[0].prev = frame_cnt;
+    nodes[0].prev = frame_cnt - 1;
+    nodes[frame_cnt-1].next = 0;
     nodes[frame_cnt].next = frame_cnt;
     nodes[frame_cnt].prev = frame_cnt;
 
@@ -113,11 +114,15 @@ void traceFrames(FILE *f, const LRUg *lru) {
         fprintf(f, " %2hhu", idx);
         idx = lru->nodes[idx].next;
     }
-    fprintf(f, "\nfree:");
-    idx = lru->free;
-    while ( idx < lru->frame_cnt ) {
+    if ( lru->free < lru->frame_cnt ) {
+        fprintf(f, "\nfree:");
+        idx = lru->free;
         fprintf(f, " %2hhu", idx);
         idx = lru->nodes[idx].next;
+        while ( idx != lru->free ) {
+            fprintf(f, " %2hhu", idx);
+            idx = lru->nodes[idx].next;
+        }
     }
     fprintf(f, "\n");
 }
