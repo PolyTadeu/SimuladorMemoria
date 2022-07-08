@@ -45,12 +45,6 @@ b32 isLoaded(PageTable *vtable, Vaddr addr) {
 void unloadPage(PageTable *vtable, Pid pid, PageNum page) {
     PageLine *pline = vtable->page + page;
 
-    printf("---------\n");
-    printf("pid: "S_PID", page: %hhu\n",
-            P_PID(pid), page);
-    printf("pline->flags: %X, pline->frame: %hhu\n",
-            pline->flags, pline->frame);
-    printf("---------\n");
     assert( Is_Flag_Set(PageFlag_Loaded, pline->flags) );
 
     if ( Is_Flag_Set(PageFlag_Modified, pline->flags) ) {
@@ -69,18 +63,21 @@ void loadPage(LRUg *lrug, PageTable *vtable, Pid pid, Vaddr addr) {
         unloadPage(vtable, pid, page);
     } else {
         if ( is_full_g(lrug) ) {
-            frame = dequeue_g(lrug);
-            const LRUg_Node node = lrug->nodes[frame];
-            unloadPage(GetVtable(node.pid), node.pid, node.page);
+            const LRUg_Node node =
+                dequeue_g(lrug, pid, VirtPage(addr), &frame);
+            PageTable *other_vtable = GetVtable(node.pid);
+            dequeue_p(&(other_vtable->lru));
+            unloadPage(other_vtable, node.pid, node.page);
         } else {
-            frame = alloc_page_g(lrug);
+            frame = alloc_page_g(lrug, pid, VirtPage(addr));
         }
     }
     alloc_page_p(lru, VirtPage(addr));
     vtable->page[VirtPage(addr)].frame = frame;
     vtable->page[VirtPage(addr)].flags = PageFlag_Loaded;
+    lrug->nodes[frame].pid = pid;
+    lrug->nodes[frame].page = VirtPage(addr);
     copy_from_disk(pid, VirtPage(addr), frame);
-    Set_Flag(PageFlag_Loaded, GetPageFlags(vtable, addr));
 }
 
 FrameIdx getFrameIdx(PageTable *vtable, Vaddr addr) {
@@ -89,15 +86,15 @@ FrameIdx getFrameIdx(PageTable *vtable, Vaddr addr) {
     return vtable->page[VirtPage(addr)].frame;
 }
 
-void markPageUsed(LRUg *lrug, PageTable *vtable, Vaddr addr) {
+void markPageUsed(LRUg *lrug, PageTable *vtable, Pid pid, Vaddr addr) {
     assert(isLoaded(vtable, addr)
             && "Trying to makePageUsed a unloaded Page");
     markUsed_p(&(vtable->lru), VirtPage(addr));
-    markUsed_g(lrug, getFrameIdx(vtable, addr));
+    markUsed_g(lrug, getFrameIdx(vtable, addr), pid, VirtPage(addr));
 }
 
-void markPageModified(LRUg *lrug, PageTable *vtable, Vaddr addr) {
-    markPageUsed(lrug, vtable, addr);
+void markPageModified(LRUg *lrug, PageTable *vtable, Pid pid, Vaddr addr) {
+    markPageUsed(lrug, vtable, pid, addr);
     Set_Flag(PageFlag_Modified, GetPageFlags(vtable, addr));
 }
 

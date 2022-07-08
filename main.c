@@ -116,7 +116,7 @@ u8 read_addr(Pid pid, Vaddr addr) {
         printf("=== PageFault ===\n");
         loadPage(global.lrug, vtable, pid, addr);
     }
-    markPageUsed(global.lrug, vtable, addr);
+    markPageUsed(global.lrug, vtable, pid, addr);
     FrameIdx frame = getFrameIdx(vtable, addr);
     Faddr real = RealAddr(frame, addr);
 
@@ -136,7 +136,7 @@ void write_addr(Pid pid, Vaddr addr, u8 byte) {
         printf("=== PageFault ===\n");
         loadPage(global.lrug, vtable, pid, addr);
     }
-    markPageModified(global.lrug, vtable, addr);
+    markPageModified(global.lrug, vtable, pid, addr);
     FrameIdx frame = getFrameIdx(vtable, addr);
     Faddr real = RealAddr(frame, addr);
     global.mem[real] = byte;

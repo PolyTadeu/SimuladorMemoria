@@ -30,8 +30,13 @@ void init_lrug(LRUg *lru, u32 frame_cnt) {
         exit(1);
     }
     for ( u64 i = 0; i < frame_cnt; i++ ) {
-        nodes[i].next = i+1;
-        nodes[i].prev = i-1;
+        const LRUg_Node node = {
+            .pid  = 0,
+            .page = 0,
+            .next = i+1,
+            .prev = i-1,
+        };
+        nodes[i] = node;
     }
     nodes[0].prev = frame_cnt - 1;
     nodes[frame_cnt-1].next = 0;
@@ -70,7 +75,7 @@ void put_node_before(LRUg *lru, FrameIdx frame,
     lru->nodes[before].prev = frame;
 }
 
-FrameIdx alloc_page_g(LRUg *lru) {
+FrameIdx alloc_page_g(LRUg *lru, Pid pid, PageNum page) {
     assert( !is_full_g(lru) );
     FrameIdx frame = lru->free;
     {
@@ -87,10 +92,16 @@ FrameIdx alloc_page_g(LRUg *lru) {
         // Coloca no final da lista
         put_node_before(lru, frame, lru->frame_cnt);
     }
+    lru->nodes[frame].pid = pid;
+    lru->nodes[frame].page = page;
     return frame;
 }
 
-void markUsed_g(LRUg *lru, FrameIdx frame) {
+void markUsed_g(LRUg *lru, FrameIdx frame, Pid pid, PageNum page) {
+    assert( pid == lru->nodes[frame].pid
+            && "Marking frame as used with a wrong pid" );
+    assert( page == lru->nodes[frame].page
+            && "Marking frame as used with a wrong page" );
     for ( FrameIdx now = lru->nodes[frame].next;
             now != lru->frame_cnt;
             now = lru->nodes[now].next ) {
@@ -100,11 +111,15 @@ void markUsed_g(LRUg *lru, FrameIdx frame) {
     put_node_before(lru, frame, lru->frame_cnt);
 }
 
-FrameIdx dequeue_g(LRUg *lru) {
+LRUg_Node dequeue_g(LRUg *lru, Pid pid, PageNum page, FrameIdx *retFrame) {
     const FrameIdx frame = lru->nodes[lru->frame_cnt].next;
     assert( frame < lru->frame_cnt );
-    markUsed_g(lru, frame);
-    return frame;
+    const LRUg_Node retNode = lru->nodes[frame];
+    markUsed_g(lru, frame, retNode.pid, retNode.page);
+    lru->nodes[frame].pid = pid;
+    lru->nodes[frame].pid = page;
+    *retFrame = frame;
+    return retNode;
 }
 
 void traceFrames(FILE *f, const LRUg *lru) {
