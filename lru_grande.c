@@ -123,20 +123,33 @@ LRUg_Node dequeue_g(LRUg *lru, Pid pid, PageNum page, FrameIdx *retFrame) {
 }
 
 void traceFrames(FILE *f, const LRUg *lru) {
-    fprintf(f, "LRUg:");
+    fprintf(f, "LRUg:\n");
     FrameIdx idx = lru->nodes[lru->frame_cnt].next;
+    u8 i = 0;
     while ( idx < lru->frame_cnt ) {
-        fprintf(f, " %2hhu", idx);
+        fprintf(f, " %2hhu:%02hhu;%02hhu",
+                idx, lru->nodes[idx].pid, lru->nodes[idx].page);
         idx = lru->nodes[idx].next;
+        if ( i += 1, i == 0x04 ) {
+            fprintf(f, "  ");
+        } else if ( i >= 0x08 ) {
+            fprintf(f, "\n");
+            i = 0;
+        }
     }
     if ( lru->free < lru->frame_cnt ) {
-        fprintf(f, "\nfree:");
+        fprintf(f, "\nfree:\n");
         idx = lru->free;
         fprintf(f, " %2hhu", idx);
         idx = lru->nodes[idx].next;
+        i = 1;
         while ( idx != lru->free ) {
             fprintf(f, " %2hhu", idx);
             idx = lru->nodes[idx].next;
+            if ( i += 1, i > 0x10 ) {
+                fprintf(f, "\n");
+                i = 0;
+            }
         }
     }
     fprintf(f, "\n");
